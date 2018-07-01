@@ -1,0 +1,35 @@
+FROM python:2.7
+MAINTAINER amitbac
+ 
+# Creating Application Source Code Directory
+RUN mkdir -p /k8s-client-python/src
+
+# Setting Home Directory for containers
+WORKDIR /k8s-client-python/src
+
+# Installing python dependencies
+COPY ./src /k8s-client-python/src
+RUN find .
+RUN python --version
+RUN pip list 
+RUN chmod +x ./script/entry.sh
+RUN chmod +x ./app/Kubernetes_Python_Client.py
+
+# Copying k8s config 
+RUN mkdir -p /root/.kube
+COPY .kube /root/.kube
+RUN ls /root/.kube/ 
+
+# Application Environment variables
+ENV APP_NAME k8s-client-python
+
+# Exposing Ports
+#EXPOSE 5035
+
+# Setting Persistent data
+#VOLUME ["/app-data"]
+
+ENTRYPOINT ["./script/entry.sh"]
+
+# Running Python Application
+#CMD ["python", "./app/Kubernetes_Python_Client.py"]
