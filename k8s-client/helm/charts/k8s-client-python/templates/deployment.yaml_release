@@ -25,9 +25,9 @@ spec:
       - name: admin-volume
         hostPath:
            path: {{ .Values.pod.admin_volume_path }}
-      - name: app-volume
-        hostPath:
-           path: {{ .Values.pod.app_volume_path }} 
+#      - name: app-volume
+#        hostPath:
+#           path: {{ .Values.pod.app_volume_path }} 
       containers:
       - name: k8s-client-python-container
         image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
@@ -37,9 +37,20 @@ spec:
           mountPath: {{ .Values.volume.mountPath }} 
         - name: admin-volume
           mountPath: /admin-volume
-        - name: app-volume 
-          mountPath: /app
-        command: ["/bin/sh", "-c"]
-        args:
-          - ./script/entry.sh;
-            python /app/Kubernetes_Python_Client-falsk.py
+#        - name: app-volume 
+#          mountPath: /app
+#        command: ["/bin/sh", "-c"]
+#        args:
+#          - ./script/entry.sh;
+#            python /app/Kubernetes_Python_Client-falsk.py
+#            echo "test"  
+#        command: ["/usr/local/bin/python"]
+#        args:
+#           - /app/Kubernetes_Python_Client-falsk.py
+#            python ./app/Kubernetes_Python_Client-falsk.py
+#          - ./script/entry.sh;python ./app/Kubernetes_Python_Client.py {{ .Values.namespace }}
+#            while true; do
+#              python ./app/Kubernetes_Python_Client.py {{ .Values.namespace }}
+#              cp ./app/output/* {{ .Values.volume.mountPath }};
+#              sleep 10;
+#            done

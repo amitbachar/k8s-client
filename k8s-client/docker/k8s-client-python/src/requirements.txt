@@ -1,5 +1,5 @@
 datetime
-#kubernetes==3.0.0
+#kubernetes==2.0.0
 kubernetes
 beautifultable
 PrettyTable
