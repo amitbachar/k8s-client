@@ -11,13 +11,21 @@ ENV DOCKYARD_SRVHOME=/k8s-client-python
 ENV DOCKYARD_SRVPROJ=/k8s-client-python/src 
 # Application Environment variables
 ENV APP_NAME k8s-client-python
+# Volume Path
+ENV DOCKYARD_VOLPATH=/run/k8s-client-python
 
 # Creating Application Source Code Directory
 RUN mkdir -p $DOCKYARD_SRVHOME
 
 # copy sources to containers
 COPY . $DOCKYARD_SRVHOME
-#COPY $DOCKYARD_SRC $DOCKYARD_SRVPROJ
+
+# Setting Persistent data
+VOLUME ["$DOCKYARD_VOLPATH"]
+
+#RUN cp -rf $DOCKYARD_SRVPROJ $DOCKYARD_VOLPATH
+RUN ls $DOCKYARD_SRVPROJ 
+#RUN ls $DOCKYARD_VOLPATH
 
 # Setting Home Directory for containers
 WORKDIR $DOCKYARD_SRVPROJ
@@ -27,6 +35,7 @@ RUN python --version
 RUN pip list 
 RUN chmod +x ./script/entry.sh
 RUN chmod +x ./app/Kubernetes_Python_Client-falsk.py
+#RUN chmod +x $DOCKYARD_VOLPATH/app/Kubernetes_Python_Client-falsk.py
 
 # Copying k8s config 
 RUN cp -r /k8s-client-python/.kube /root/
@@ -38,10 +47,7 @@ RUN ln -sf /usr/share/zoneinfo/Israel /etc/localtime
 # Exposing Ports
 EXPOSE 5555
 
-# Setting Persistent data
-#VOLUME ["/$APP_NAME"]
-
 ENTRYPOINT ["./script/entry.sh"]
 
 # Running Python Application
-CMD ["python", "./app/Kubernetes_Python_Client-falsk.py"]
+CMD ["python", "$DOCKYARD_VOLPATH/app/Kubernetes_Python_Client-falsk.py"]

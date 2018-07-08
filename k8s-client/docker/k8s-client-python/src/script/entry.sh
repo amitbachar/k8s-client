@@ -13,6 +13,6 @@ then
    cp -r /admin-volume/.kube /root/
 fi
 
-#while true; do python ./app/get_pod_info_table_view.py ; sleep 10;done
+#cp -rf $DOCKYARD_SRVPROJ/app $DOCKYARD_VOLPATH
 
 exec $@

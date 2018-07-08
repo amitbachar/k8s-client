@@ -2,9 +2,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Values.service.name }} 
+  name: {{ .Values.service.name }}-{{ .Values.version }}
   labels:
-    run: {{ .Values.service.label }} 
+    run: {{ .Values.service.label }}-{{ .Values.version }} 
 spec:
   type: {{ .Values.service.type }}
   ports:
@@ -14,4 +14,4 @@ spec:
     protocol: TCP
     name: http
   selector:
-    run: {{ .Values.service.selector }}
+    run: {{ .Values.service.selector }}-{{ .Values.version }}

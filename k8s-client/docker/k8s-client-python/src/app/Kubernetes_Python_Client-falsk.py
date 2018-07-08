@@ -18,6 +18,7 @@ from operator import itemgetter
 from flasgger import Swagger
 from flasgger.utils import swag_from
 import logging
+import re
 
 class color:
    PURPLE = '\033[95m'
@@ -30,6 +31,9 @@ class color:
    BOLD = '\033[1m'
    UNDERLINE = '\033[4m'
    END = '\033[0m'
+
+def get_numbers_from_filename(filename):
+    return re.search(r'\d+', filename).group(0)
 
 config.load_kube_config()
 api_instance = client.CoreV1Api()
@@ -71,66 +75,99 @@ def ms_dashbord(namespace):
       msddata_array = []
       msddata_dict = {}
       for i in api_instance.list_namespaced_pod(namespace).items:
-          pod_labels = i.metadata.labels
-          #return jsonify(pod_labels) , 200
-          if 'microservice' in pod_labels.keys():
-            pod_name = i.metadata.name
-            ms_name = i.metadata.labels['microservice']
-            for current_pod in i.spec.containers:
-              pod_image = current_pod.image
-              docker_image_name= pod_image.split("/")[1].split(":")[0]
-              ms_ver_in_env = pod_image.split("/")[1].split(":")[1]
-            #logging.info("pod_name:{:<60}  | pod_labels:{:<80}".format(pod_name,ms_name,pod_image))
-            #MSNEXT_VERSION = api_instance.connect_get_namespaced_pod_exec(pod_name, namespace, command="ls -l /opt/amdocs/msnext |grep -v 'No such file'|awk '{print $NF}'")
-            try:
-              exec_command = ['/bin/sh','-c',"ls -l /opt/amdocs/msnext |grep -v 'No such file'|awk '{print $NF}'"]
-              #exec_command =  ['/bin/sh','-c','pwd']
-              #MSNEXT_VERSION = api_instance.connect_get_namespaced_pod_exec(pod_name,namespace,command=exec_command,stderr=True, stdin=False,stdout=True, tty=False)
-              logging.info("Pod name:  {}".format(pod_name))
-              MSNEXT_VERSION = stream(api.connect_get_namespaced_pod_exec,pod_name,namespace,command=exec_command)
-              #pod_phase = api.read_namespaced_pod(pod_name, namespace).status.phase
-              #logging.info("Pod phase {} without returning test results".format(pod_phase))
-              if "non-zero exit code" not in MSNEXT_VERSION:
-                logging.info("MSNEXT_VERSION: {}".format(MSNEXT_VERSION))
-            except ApiException as e:
-              pod_phase = api.read_namespaced_pod(pod_name, namespace).status.phase
-              if pod_phase == 'Succeeded' or pod_phase == 'Failed' or pod_phase == 'Pending':
-                logging.info("Pod phase {} without returning test results".format(pod_phase))
+        logging.info("[START]*************validating container is running ****************")
+        pod_name = i.metadata.name
+        pod_phase = api.read_namespaced_pod(pod_name, namespace).status.phase
+        #logging.info("pod_name:{:<60}  | pod_phase:{:<80} ".format(pod_name,pod_phase))
+        containerStatuses = api.read_namespaced_pod(pod_name, namespace).status.container_statuses
+        #logging.info(containerStatuses)
+        for jtem in containerStatuses:
+          container_ready=jtem.ready
+        logging.info("pod_name:{:<40}  | pod_phase:{:<40} | container_ready:{:<40}".format(pod_name,pod_phase,container_ready))
+        #logging.info(i) 
+        #if pod_phase not in [ 'Succeeded','Failed','Pending']:
+        logging.info("[END]*************validating container is running ****************")
+        if container_ready :
+            pod_labels = i.metadata.labels
+            #return jsonify(pod_labels) , 200
+            if 'microservice' in pod_labels.keys():
+              #pod_name = i.metadata.name
+              ms_name = i.metadata.labels['microservice']
+              for current_pod in i.spec.containers:
+                pod_image = current_pod.image
+                docker_image_name= pod_image.split("/")[1].split(":")[0]
+                ms_ver_in_env = pod_image.split("/")[1].split(":")[1]
+              #logging.info("pod_name:{:<60}  | pod_labels:{:<80}".format(pod_name,ms_name,pod_image))
+              #MSNEXT_VERSION = api_instance.connect_get_namespaced_pod_exec(pod_name, namespace, command="ls -l /opt/amdocs/msnext |grep -v 'No such file'|awk '{print $NF}'")
+              logging.info("[START]*************retrieving MSNEXT_VERSION****************")
+              try:
+                exec_command = ['/bin/sh','-c',"ls -l /opt/amdocs/msnext |grep -v 'No such file'|awk '{print $NF}'"]
+                #exec_command =  ['/bin/sh','-c','pwd']
+                #MSNEXT_VERSION = api_instance.connect_get_namespaced_pod_exec(pod_name,namespace,command=exec_command,stderr=True, stdin=False,stdout=True, tty=False)
+                logging.info("Pod name:  {}".format(pod_name))
+                MSNEXT_VERSION = stream(api.connect_get_namespaced_pod_exec,pod_name,namespace,command=exec_command)
+                #pod_phase = api.read_namespaced_pod(pod_name, namespace).status.phase
+                #logging.info("Pod phase {} without returning test results".format(pod_phase))
+                if "non-zero exit code" not in MSNEXT_VERSION:
+                  logging.info("MSNEXT_VERSION: {}".format(MSNEXT_VERSION))
+              except ApiException as e:
+                pod_phase = api.read_namespaced_pod(pod_name, namespace).status.phase
+                if pod_phase == 'Succeeded' or pod_phase == 'Failed' or pod_phase == 'Pending':
+                  logging.info("Pod phase {} without returning test results".format(pod_phase))
+                  return None
+              except Exception as e:
+                logging.info("execption: %s" % e)
                 return None
-            except Exception as e:
-              logging.info("execption: %s" % e)
-              return None
-            try:
-              exec_command = ['/bin/sh','-c',"exe_jar=`find /opt/amdocs/msnext/deploy/ -name '*-exe-*.jar' |grep -v 'No such file' |tr -d '\r'`; jar tf ${exe_jar} >> /dev/null 2>&1 ; if [ $? -ne 0 ]; then echo 'NA NA NA NA NA'; else jar tf ${exe_jar} |grep msb |grep spring-boot-starter|tr -d '\r'|awk -F'/' '{print $NF}' | sort; fi "]
-              #exec_command =  ['/bin/sh','-c','pwd']
-              #MSNEXT_VERSION = api_instance.connect_get_namespaced_pod_exec(pod_name,namespace,command=exec_command,stderr=True, stdin=False,stdout=True, tty=False)
-              logging.info("Pod name:  {}".format(pod_name))
-              MSB_VERSIONS = stream(api.connect_get_namespaced_pod_exec,pod_name,namespace,command=exec_command)
-              #pod_phase = api.read_namespaced_pod(pod_name, namespace).status.phase
-              #logging.info("Pod phase {} without returning test results".format(pod_phase))
-              if "non-zero exit code" not in MSB_VERSIONS:
-                logging.info("MSB_VERSIONS: {}".format(MSB_VERSIONS))
-              #MSB_VERSIONS_array = MSB_VERSIONS.split().split("-spring-boot-starter-")
-              MSB_VERSIONS_array = MSB_VERSIONS.split()
-              logging.info("MSB_VERSIONS_array: {}".format(MSB_VERSIONS_array))
-              #MSB_VERSIONS_array_len = len(MSB_VERSIONS_array)
-              #logging.info(MSB_VERSIONS_array_len)
-              
-              #for i in range(len(MSB_VERSIONS_array)):
-                #MSB_VERSIONS_array[i]=MSB_VERSIONS_array[i].split('-spring-boot-starter-')
-         
-            except ApiException as e:
-              pod_phase = api.read_namespaced_pod(pod_name, namespace).status.phase
-              if pod_phase == 'Succeeded' or pod_phase == 'Failed' or pod_phase == 'Pending':
-                logging.info("Pod phase {} without returning test results".format(pod_phase))
+              logging.info("[END]*************retrieving MSNEXT_VERSION****************")
+              logging.info("[START]*************retrieving MSB_VERSIONS****************")
+              try:
+                #exec_command = ['/bin/sh','-c',"exe_jar=`find /opt/amdocs/msnext/deploy/ -name '*-exe-*.jar' |grep -v 'No such file' |tr -d '\r'`; jar tf ${exe_jar} >> /dev/null 2>&1 ; if [ $? -ne 0 ]; then echo 'NA NA NA NA NA'; else jar tf ${exe_jar} |grep msb |grep spring-boot-starter|tr -d '\r'|awk -F'/' '{print $NF}' | sort; fi "]
+                exec_command = [
+                      '/bin/sh',
+                      '-c',
+                      '''exe_jar=`find /opt/amdocs/msnext/deploy/ -name '*-exe-*.jar' |grep -v 'No such file' |tr -d '\r'`;
+                       jar tf ${exe_jar} >> /dev/null 2>&1 ; 
+                       if [ $? -ne 0 ]; 
+                          then echo 'NA NA NA NA NA'; 
+                       else 
+                          jar tf ${exe_jar} |grep msb |grep spring-boot-starter|tr -d '\r'|awk -F'/' '{print $NF}' | sort;
+                       fi ''']
+                
+                #MSNEXT_VERSION = api_instance.connect_get_namespaced_pod_exec(pod_name,namespace,command=exec_command,stderr=True, stdin=False,stdout=True, tty=False)
+                logging.info("Pod name:  {}".format(pod_name))
+                MSB_VERSIONS = stream(api.connect_get_namespaced_pod_exec,pod_name,namespace,command=exec_command)
+                #pod_phase = api.read_namespaced_pod(pod_name, namespace).status.phase
+                #logging.info("Pod phase {} without returning test results".format(pod_phase))
+                if "non-zero exit code" not in MSB_VERSIONS:
+                  logging.info("MSB_VERSIONS: {}".format(MSB_VERSIONS))
+                #MSB_VERSIONS_array = MSB_VERSIONS.split().split("-spring-boot-starter-")
+                MSB_VERSIONS_array = MSB_VERSIONS.split()
+                logging.info("MSB_VERSIONS_array: {}".format(MSB_VERSIONS_array))
+                #MSB_VERSIONS_array_len = len(MSB_VERSIONS_array)
+                #logging.info(MSB_VERSIONS_array_len)
+                
+                for i in range(len(MSB_VERSIONS_array)):
+                  #MSB_VERSIONS_array[i]=MSB_VERSIONS_array[i].split('-spring-boot-starter-')
+                  file_name=MSB_VERSIONS_array[i]
+                  logging.info("file_name {} ".format(file_name))
+                  regex = re.compile(r'\d+')
+                  MSB_VERSIONS_array[i]=regex.findall(file_name)
+                  MSB_VERSIONS_array[i]=".".join(MSB_VERSIONS_array[i])
+                  #MSB_VERSIONS_array[i]=get_numbers_from_filename(file_name)
+              except ApiException as e:
+                pod_phase = api.read_namespaced_pod(pod_name, namespace).status.phase
+                if pod_phase == 'Succeeded' or pod_phase == 'Failed' or pod_phase == 'Pending':
+                  logging.info("Pod phase {} without returning test results".format(pod_phase))
+                  return None
+              except Exception as e:
+                logging.info("execption: %s" % e)
                 return None
-            except Exception as e:
-              logging.info("execption: %s" % e)
-              return None  
-            #logging.info(MSNEXT_VERSION)
-            idata = [ms_name,ms_ver_in_env,docker_image_name,MSNEXT_VERSION] + MSB_VERSIONS_array
-            #idata = [ms_name,ms_ver_in_env,docker_image_name]
-            msddata_array.append(idata)
+              logging.info("[END]*************retrieving MSB_VERSIONS****************")
+              #logging.info(MSNEXT_VERSION)
+              idata = [ms_name,ms_ver_in_env,docker_image_name,MSNEXT_VERSION] + MSB_VERSIONS_array
+              #idata = [ms_name,ms_ver_in_env,docker_image_name]
+              msddata_array.append(idata)
+
       sorted_msddata_array = sorted(msddata_array, key=itemgetter(0))
       #logging.info(sorted_msddata_array) 
       #return 'true'
