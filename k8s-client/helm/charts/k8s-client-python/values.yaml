@@ -13,7 +13,7 @@ deployment:
 pod:
 # /users/admin is the directory hosts the k8s configuration .kube
   admin_volume_path: /users/admin
-  app_volume_path: /root/k8s-client/docker/k8s-client-python/src/app
+  app_volume_path: /users/admin/k8s-client/docker/k8s-client-python/src/app
 container:
   name: k8s-client-python-container 
 volume:

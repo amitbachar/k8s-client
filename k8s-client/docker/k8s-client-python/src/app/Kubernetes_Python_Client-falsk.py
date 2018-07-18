@@ -101,7 +101,8 @@ def ms_dashbord(namespace):
               #MSNEXT_VERSION = api_instance.connect_get_namespaced_pod_exec(pod_name, namespace, command="ls -l /opt/amdocs/msnext |grep -v 'No such file'|awk '{print $NF}'")
               logging.info("[START]*************retrieving MSNEXT_VERSION****************")
               try:
-                exec_command = ['/bin/sh','-c',"ls -l /opt/amdocs/msnext |grep -v 'No such file'|awk '{print $NF}'"]
+                #exec_command = ['/bin/sh','-c',"ls -l /opt/amdocs/msnext |grep -v 'No such file'|awk '{print $NF}'"]
+                exec_command = ['/bin/sh','-c',"readlink /opt/amdocs/msnext"]
                 #exec_command =  ['/bin/sh','-c','pwd']
                 #MSNEXT_VERSION = api_instance.connect_get_namespaced_pod_exec(pod_name,namespace,command=exec_command,stderr=True, stdin=False,stdout=True, tty=False)
                 logging.info("Pod name:  {}".format(pod_name))
@@ -121,16 +122,24 @@ def ms_dashbord(namespace):
               logging.info("[END]*************retrieving MSNEXT_VERSION****************")
               logging.info("[START]*************retrieving MSB_VERSIONS****************")
               try:
-                #exec_command = ['/bin/sh','-c',"exe_jar=`find /opt/amdocs/msnext/deploy/ -name '*-exe-*.jar' |grep -v 'No such file' |tr -d '\r'`; jar tf ${exe_jar} >> /dev/null 2>&1 ; if [ $? -ne 0 ]; then echo 'NA NA NA NA NA'; else jar tf ${exe_jar} |grep msb |grep spring-boot-starter|tr -d '\r'|awk -F'/' '{print $NF}' | sort; fi "]
+                #exec_command = ['/bin/sh','-c',"[ -f /opt/amdocs/msnext/deploy/ ] && exe_jar=`find /opt/amdocs/msnext/deploy/ -name '*-exe-*.jar' |grep -v 'No such file' |tr -d '\r'` || echo 'NA NA NA NA NA'; jar tf ${exe_jar} >> /dev/null 2>&1 ; if [ $? -ne 0 ]; then echo 'NA NA NA NA NA'; else jar tf ${exe_jar} |grep msb |grep spring-boot-starter|tr -d '\r'|awk -F'/' '{print $NF}' | sort; fi "]
                 exec_command = [
                       '/bin/sh',
                       '-c',
-                      '''exe_jar=`find /opt/amdocs/msnext/deploy/ -name '*-exe-*.jar' |grep -v 'No such file' |tr -d '\r'`;
-                       jar tf ${exe_jar} >> /dev/null 2>&1 ; 
-                       if [ $? -ne 0 ]; 
+                      '''if [ -d /opt/amdocs/msnext/deploy/ ]  
+			 then
+				exe_jar=`find /opt/amdocs/msnext/deploy/ -name '*-exe-*.jar' |grep -v 'No such file' |tr -d '\r'`;
+			 else
+				echo 'NA NA NA NA NA';
+			 fi
+                       if [ ! -z "${exe_jar}" ] 
+                       then
+                       	jar tf ${exe_jar} >> /dev/null 2>&1 ; 
+                       	if [ $? -ne 0 ]; 
                           then echo 'NA NA NA NA NA'; 
-                       else 
+                       	else 
                           jar tf ${exe_jar} |grep msb |grep spring-boot-starter|tr -d '\r'|awk -F'/' '{print $NF}' | sort;
+			fi
                        fi ''']
                 
                 #MSNEXT_VERSION = api_instance.connect_get_namespaced_pod_exec(pod_name,namespace,command=exec_command,stderr=True, stdin=False,stdout=True, tty=False)
